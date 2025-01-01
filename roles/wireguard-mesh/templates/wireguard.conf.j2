@@ -1,0 +1,34 @@
+{% for tunnel in wireguard %}
+{% set global = { 'localarea' : 'global' } %}
+{% for node in tunnel.nodes %}
+{% for fqdn, data in node.items() %}
+{% if fqdn == ansible_fqdn and data is not none %}
+# WireGuard Tunnel: {{ tunnel.name }}
+[Interface]
+PrivateKey = {{ data.wg_private | default("MISSING") }}
+Address = {{ data.wg_ip | default("MISSING") }}
+ListenPort = {{ data.wg_port | default("12345") }}
+{% if data.wg_local is defined %}
+{% set global = global.update({ 'localarea': data.wg_local }) %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+{% for node in tunnel.nodes %}
+{% for fqdn, data in node.items() %}
+{% if fqdn != ansible_fqdn and data is not none and data.wg_public is defined %}
+{% set peer_local = data.wg_local | default("global") %}
+
+# Peer {{ fqdn }} ({{ peer_local }})
+[Peer]
+PublicKey = {{ data.wg_public }}
+AllowedIPs = {{ data.wg_ip }}/32
+PersistentKeepalive = 25
+{% if peer_local == global['localarea'] or peer_local == "global" %}
+Endpoint = {{ data.wg_extip }}:{{ data.wg_port }}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endfor %}

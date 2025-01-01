@@ -1,0 +1,49 @@
+---
+- name: Initialize restart_services variable
+  set_fact:
+    restart_services: []
+
+- name: Ensure WireGuard is installed
+  ansible.builtin.package:
+    name:
+      - wireguard-tools
+    state: present
+
+- name: Generate WireGuard configuration
+  template:
+    src: wireguard.conf.j2
+    dest: /etc/wireguard/wg-{{ item.name }}.conf
+  loop: "{{ wireguard }}"
+  register: config_result
+  no_log: true
+
+- name: Add services to restart list if configs changed
+  set_fact:
+    restart_services: "{{ restart_services | default([]) + ['wg-quick@wg-' + item.item.name + '.service'] }}"
+  loop: "{{ config_result.results }}"
+  when: item.changed
+  no_log: true
+
+- name: Ensure WireGuard enabled and running
+  ansible.builtin.systemd:
+    name: wg-quick@wg-{{ item.name }}.service
+    state: started
+    enabled: yes
+  loop: "{{ wireguard }}"
+  no_log: true
+
+- name: Restart WireGuard services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ restart_services | unique }}"
+  when: restart_services | length > 0
+
+- name: Add a cron job
+  ansible.builtin.lineinfile:
+    path: /etc/crontab
+    line: "*/5 * * * * root for i in $(cat /etc/wireguard/wg-*.conf | grep Allowed| cut -d '=' -f 2|cut -d '/' -f 1); do ping -c 1 -w 1 $i ; done"
+    state: present
+    create: yes
+    backup: yes
+  notify: Restart cron service

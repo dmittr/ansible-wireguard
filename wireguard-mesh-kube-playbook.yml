@@ -1,0 +1,6 @@
+- name: Wireguard to servers
+  hosts: servers
+  vars_files:
+    - secret.yml
+  roles:
+    - role: wireguard-mesh
