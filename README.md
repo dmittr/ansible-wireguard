@@ -6,7 +6,9 @@ Edit your secret.yml file to describe your configuration. No need to store keys 
 
 `PRIVATE_KEY=$(wg genkey) && echo -ne "Private Key: $PRIVATE_KEY\nPublic Key: " && echo "$PRIVATE_KEY" | wg pubkey` 
 
-to get keypairs.
+to get keypairs. Create dedicated playbook for each wireguard network, they are defined by secret.yml and `wg_group` variable.
+
+!!! It is higly recommended to protect your secret.yml with ansible-vault !!!
 
 secret.yml fields:
 * `name` - interface name for wireguard. will be `wg-kube` if name is `kube`
@@ -17,6 +19,7 @@ secret.yml fields:
 * `node->wg_port` - listen port, may be skipped for some peers as well
 * `node->wg_extip` - IP address to be exposed as part of `Endpoint` in config for others.
 * `node->wg_local` - Tag to separate zones.
+* `node->wg_route` - Route which will be added to peer configuration to `AllowedIPs` value.
 
 ### Tags for zone separation
 Let's assume that we want to build a mixed network where some hosts are behind NAT (e.g. home lab), then for such hosts we can specify `home` in the `wg_local` field and use internal addresses (e.g. 192.168.x.y) as `wg_extip` . During the config generation phase it will be checked if the hosts have the same tag, then their configs will specify `Endpoint` to internal addresses. This way hosts behind NAT can establish a connection directly within the local network. If `wg_local` is set to `global`, or not set at all, then the `wg_extip:wg_port` mapping will be set to `Endpoint` for all hosts - this is the best option for hosts with a permanent public IP. 

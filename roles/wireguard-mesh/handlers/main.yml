@@ -3,4 +3,8 @@
   ansible.builtin.systemd:
     name: crond
     state: restarted
-    
+
+- name: Restart WireGuard service
+  ansible.builtin.systemd:
+    name: "wg-quick@wg-{{ wg_group }}.service"
+    state: restarted

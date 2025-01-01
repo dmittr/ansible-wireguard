@@ -1,34 +1,34 @@
-{% for tunnel in wireguard %}
+{% set selected_tunnel = wireguard | selectattr('name', 'equalto', wg_group) | first %}
 {% set global = { 'localarea' : 'global' } %}
-{% for node in tunnel.nodes %}
-{% for fqdn, data in node.items() %}
-{% if fqdn == ansible_fqdn and data is not none %}
-# WireGuard Tunnel: {{ tunnel.name }}
+{% for node in selected_tunnel.nodes %}
+{% if node == ansible_fqdn %}
+# WireGuard Tunnel: {{ wg_group }}
 [Interface]
-PrivateKey = {{ data.wg_private | default("MISSING") }}
-Address = {{ data.wg_ip | default("MISSING") }}
-ListenPort = {{ data.wg_port | default("12345") }}
-{% if data.wg_local is defined %}
-{% set global = global.update({ 'localarea': data.wg_local }) %}
+PrivateKey = {{ selected_tunnel.nodes[node].wg_private | default("MISSING") }}
+Address = {{ selected_tunnel.nodes[node].wg_ip | default("MISSING") }}
+ListenPort = {{ selected_tunnel.nodes[node].wg_port | default("55667") }}
+{% if selected_tunnel.nodes[node].wg_local is defined %}
+{% set global = global.update({ 'localarea': selected_tunnel.nodes[node].wg_local }) %}
 {% endif %}
 {% endif %}
 {% endfor %}
-{% endfor %}
+{% for node in selected_tunnel.nodes %}
+{% if node != ansible_fqdn %}
+{% set peer_local = selected_tunnel.nodes[node].wg_local | default("global") %}
+{% set peer_route = "" %}
+{% if selected_tunnel.nodes[node].wg_route is defined %}
+{% set peer_route = ","+selected_tunnel.nodes[node].wg_route %}
+{% endif %}
 
-{% for node in tunnel.nodes %}
-{% for fqdn, data in node.items() %}
-{% if fqdn != ansible_fqdn and data is not none and data.wg_public is defined %}
-{% set peer_local = data.wg_local | default("global") %}
-
-# Peer {{ fqdn }} ({{ peer_local }})
+# Peer {{ node }} ({{ peer_local }})
 [Peer]
-PublicKey = {{ data.wg_public }}
-AllowedIPs = {{ data.wg_ip }}/32
+PublicKey = {{ selected_tunnel.nodes[node].wg_public }}
+AllowedIPs = {{ selected_tunnel.nodes[node].wg_ip }}/32{{ peer_route }}
 PersistentKeepalive = 25
 {% if peer_local == global['localarea'] or peer_local == "global" %}
-Endpoint = {{ data.wg_extip }}:{{ data.wg_port }}
+{% if selected_tunnel.nodes[node].wg_extip is defined %}
+Endpoint = {{ selected_tunnel.nodes[node].wg_extip }}:{{ selected_tunnel.nodes[node].wg_port }}
 {% endif %}
 {% endif %}
-{% endfor %}
-{% endfor %}
+{% endif %}
 {% endfor %}
