@@ -1,0 +1,6 @@
+galaxy_info:
+  author: dmittr
+  description: WireGuard installation for AlmaLinux
+  license: MIT
+  min_ansible_version: "2.1"
+dependencies: []
