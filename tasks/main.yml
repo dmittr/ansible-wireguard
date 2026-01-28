@@ -5,7 +5,7 @@
       - wireguard-tools
     state: present
 
-- name: Generate WireGuard configuration
+- name: "Generate WireGuard configuration"
   template:
     src: wireguard.conf.j2
     dest: "/etc/wireguard/wg-{{ wg_group }}.conf"

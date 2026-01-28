@@ -1,7 +1,7 @@
 - name: Wireguard to servers
   hosts: servers
   vars_files:
-    - /etc/ansible/secret.yml
+    - secret.yml
   vars:
     wg_group: kube
   roles:
